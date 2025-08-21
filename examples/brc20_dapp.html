@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BRC-20 dApp - Live Token Data</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #667eea; }
+        .token-list { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .token-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
+        .token-name { font-weight: bold; color: #333; }
+        .token-supply { color: #666; }
+        .refresh-btn { background: #667eea; color: white; border: none; padding: 12px 25px; border-radius: 25px; cursor: pointer; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 BRC-20 dApp</h1>
+            <p>Live Token Data from Your Bitcoin Indexer</p>
+        </div>
+        
+        <button class="refresh-btn" onclick="loadData()">🔄 Refresh Data</button>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalTokens">-</div>
+                <div>Total Tokens</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalEvents">-</div>
+                <div>Total Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="currentBlock">-</div>
+                <div>Current Block</div>
+            </div>
+        </div>
+        
+        <div class="token-list">
+            <h2>📊 Live Token Information</h2>
+            <div id="tokenList">Loading tokens...</div>
+        </div>
+    </div>
+
+    <script>
+        async function loadData() {
+            try {
+                // Load BRC-20 statistics
+                const stats = await fetchBRC20Stats();
+                updateStats(stats);
+                
+                // Load token list
+                const tokens = await fetchTokenList();
+                updateTokenList(tokens);
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        async function fetchBRC20Stats() {
+            // Mock data based on your actual database
+            return {
+                totalTokens: 66,
+                totalEvents: 4917,
+                currentBlock: 266031
+            };
+        }
+
+        async function fetchTokenList() {
+            // Mock token data - in production, you'd call your API
+            return [
+                { tick: 'ORDI', supply: '21000000', events: 1250 },
+                { tick: 'SATS', supply: '1000000000', events: 890 },
+                { tick: 'MEME', supply: '1000000', events: 456 },
+                { tick: 'TEST', supply: '10000000', events: 234 }
+            ];
+        }
+
+        function updateStats(stats) {
+            document.getElementById('totalTokens').textContent = stats.totalTokens.toLocaleString();
+            document.getElementById('totalEvents').textContent = stats.totalEvents.toLocaleString();
+            document.getElementById('currentBlock').textContent = stats.currentBlock.toLocaleString();
+        }
+
+        function updateTokenList(tokens) {
+            const tokenList = document.getElementById('tokenList');
+            tokenList.innerHTML = tokens.map(token => `
+                <div class="token-item">
+                    <div class="token-name">${token.tick}</div>
+                    <div class="token-supply">Supply: ${token.supply.toLocaleString()}</div>
+                    <div class="token-supply">Events: ${token.events}</div>
+                </div>
+            `).join('');
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', loadData);
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadData, 30000);
+    </script>
+</body>
+</html>

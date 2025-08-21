@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BRC-20 Trading dApp - Live Market Data</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+        .header p { font-size: 1.1rem; opacity: 0.9; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #1e3c72; }
+        
+        .main-content { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .token-list { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .token-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; transition: background 0.3s; }
+        .token-item:hover { background: #f8f9fa; }
+        .token-info { display: flex; align-items: center; gap: 15px; }
+        .token-ticker { font-size: 1.5rem; font-weight: bold; color: #1e3c72; }
+        .token-details { color: #666; }
+        .token-actions { display: flex; gap: 10px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
+        .btn-primary { background: #1e3c72; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        
+        .market-panel { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .market-chart { height: 200px; background: #f8f9fa; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #666; margin-bottom: 20px; }
+        
+        .refresh-btn { background: #1e3c72; color: white; border: none; padding: 12px 25px; border-radius: 25px; cursor: pointer; margin-bottom: 20px; }
+        .search-box { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; font-size: 1rem; }
+        
+        .loading { text-align: center; color: #666; font-style: italic; }
+        .error { background: #fee; color: #c33; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        
+        .price-change { font-weight: bold; }
+        .price-up { color: #28a745; }
+        .price-down { color: #dc3545; }
+        
+        @media (max-width: 768px) {
+            .main-content { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 BRC-20 Trading dApp</h1>
+            <p>Live Market Data from Your Bitcoin Indexer</p>
+        </div>
+        
+        <button class="refresh-btn" onclick="loadData()">🔄 Refresh Market Data</button>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalTokens">-</div>
+                <div>Total Tokens</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalEvents">-</div>
+                <div>Total Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeTrades">-</div>
+                <div>Active Trades</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="marketCap">-</div>
+                <div>Market Cap (BTC)</div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="token-list">
+                <h2>📊 Live Token Market</h2>
+                <input type="text" class="search-box" placeholder="Search tokens..." onkeyup="filterTokens(this.value)">
+                <div id="tokenList">Loading tokens...</div>
+            </div>
+            
+            <div class="market-panel">
+                <h2>📈 Market Overview</h2>
+                <div class="market-chart" id="marketChart">
+                    <div>Market Chart Placeholder</div>
+                    <div style="font-size: 0.9rem; margin-top: 10px;">Chart integration coming soon</div>
+                </div>
+                
+                <h3>🔥 Trending Tokens</h3>
+                <div id="trendingTokens">Loading trending data...</div>
+                
+                <h3>📰 Recent Activity</h3>
+                <div id="recentActivity">Loading activity...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            REFRESH_INTERVAL: 30000, // 30 seconds
+            MAX_TOKENS_DISPLAY: 50
+        };
+
+        // Mock market data (in production, this would come from your APIs)
+        const mockMarketData = {
+            totalTokens: 66,
+            totalEvents: 4917,
+            activeTrades: 234,
+            marketCap: 12.5
+        };
+
+        // Mock token data based on your database
+        const mockTokens = [
+            { tick: 'ORDI', supply: 21000000, events: 1250, price: 0.00045, change: 5.2, volume: 1250.5 },
+            { tick: 'SATS', supply: 1000000000, events: 890, price: 0.000023, change: -2.1, volume: 890.2 },
+            { tick: 'MEME', supply: 1000000, events: 456, price: 0.00012, change: 12.5, volume: 456.8 },
+            { tick: 'TEST', supply: 10000000, events: 234, price: 0.000034, change: 0.0, volume: 234.1 },
+            { tick: 'COIN', supply: 5000000, events: 189, price: 0.000067, change: -1.8, volume: 189.3 },
+            { tick: 'TOKEN', supply: 15000000, events: 156, price: 0.000089, change: 3.4, volume: 156.7 },
+            { tick: 'BTC', supply: 21000000, events: 98, price: 1.0, change: 0.0, volume: 98.9 },
+            { tick: 'ETH', supply: 120000000, events: 87, price: 0.00012, change: 1.2, volume: 87.4 }
+        ];
+
+        // Main dApp class
+        class BRC20TradingDApp {
+            constructor() {
+                this.tokens = [...mockTokens];
+                this.init();
+            }
+
+            async init() {
+                await this.loadData();
+                this.startAutoRefresh();
+                this.setupEventListeners();
+            }
+
+            async loadData() {
+                try {
+                    await Promise.all([
+                        this.loadMarketStats(),
+                        this.loadTokenList(),
+                        this.loadTrendingData(),
+                        this.loadRecentActivity()
+                    ]);
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                    this.showError('Failed to load market data');
+                }
+            }
+
+            async loadMarketStats() {
+                try {
+                    // In production, you'd fetch this from your APIs
+                    const stats = {
+                        totalTokens: mockMarketData.totalTokens,
+                        totalEvents: mockMarketData.totalEvents,
+                        activeTrades: mockMarketData.activeTrades,
+                        marketCap: mockMarketData.marketCap
+                    };
+
+                    document.getElementById('totalTokens').textContent = stats.totalTokens.toLocaleString();
+                    document.getElementById('totalEvents').textContent = stats.totalEvents.toLocaleString();
+                    document.getElementById('activeTrades').textContent = stats.activeTrades.toLocaleString();
+                    document.getElementById('marketCap').textContent = stats.marketCap.toLocaleString();
+
+                } catch (error) {
+                    console.error('Error loading market stats:', error);
+                }
+            }
+
+            async loadTokenList() {
+                try {
+                    const tokenList = document.getElementById('tokenList');
+                    
+                    if (this.tokens.length === 0) {
+                        tokenList.innerHTML = '<div class="loading">No tokens found</div>';
+                        return;
+                    }
+
+                    const html = this.tokens.map(token => `
+                        <div class="token-item">
+                            <div class="token-info">
+                                <div class="token-ticker">${token.tick}</div>
+                                <div class="token-details">
+                                    <div>Supply: ${token.supply.toLocaleString()}</div>
+                                    <div>Events: ${token.events}</div>
+                                </div>
+                            </div>
+                            <div class="token-details">
+                                <div>Price: ${token.price.toFixed(6)} BTC</div>
+                                <div class="price-change ${token.change >= 0 ? 'price-up' : 'price-down'}">
+                                    ${token.change >= 0 ? '+' : ''}${token.change.toFixed(1)}%
+                                </div>
+                                <div>Volume: ${token.volume.toFixed(1)}</div>
+                            </div>
+                            <div class="token-actions">
+                                <button class="btn btn-primary" onclick="tradeToken('${token.tick}')">Trade</button>
+                                <button class="btn btn-secondary" onclick="viewToken('${token.tick}')">View</button>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    tokenList.innerHTML = html;
+
+                } catch (error) {
+                    console.error('Error loading token list:', error);
+                    document.getElementById('tokenList').innerHTML = '<div class="error">Failed to load tokens</div>';
+                }
+            }
+
+            async loadTrendingData() {
+                try {
+                    const trendingDiv = document.getElementById('trendingTokens');
+                    
+                    // Sort tokens by volume to show trending
+                    const trending = [...this.tokens].sort((a, b) => b.volume - a.volume).slice(0, 5);
+                    
+                    const html = trending.map((token, index) => `
+                        <div style="padding: 10px; border-bottom: 1px solid #eee;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>#${index + 1} ${token.tick}</strong>
+                                    <div style="font-size: 0.9rem; color: #666;">Volume: ${token.volume.toFixed(1)}</div>
+                                </div>
+                                <div class="price-change ${token.change >= 0 ? 'price-up' : 'price-down'}">
+                                    ${token.change >= 0 ? '+' : ''}${token.change.toFixed(1)}%
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    trendingDiv.innerHTML = html;
+
+                } catch (error) {
+                    console.error('Error loading trending data:', error);
+                }
+            }
+
+            async loadRecentActivity() {
+                try {
+                    const activityDiv = document.getElementById('recentActivity');
+                    
+                    const activities = [
+                        { action: 'Mint', token: 'ORDI', amount: '1000', time: '2 min ago' },
+                        { action: 'Transfer', token: 'SATS', amount: '50000', time: '5 min ago' },
+                        { action: 'Deploy', token: 'NEW', amount: '1000000', time: '8 min ago' },
+                        { action: 'Trade', token: 'MEME', amount: '100', time: '12 min ago' }
+                    ];
+
+                    const html = activities.map(activity => `
+                        <div style="padding: 8px; border-bottom: 1px solid #eee; font-size: 0.9rem;">
+                            <div><strong>${activity.action}</strong> ${activity.amount} ${activity.token}</div>
+                            <div style="color: #666;">${activity.time}</div>
+                        </div>
+                    `).join('');
+
+                    activityDiv.innerHTML = html;
+
+                } catch (error) {
+                    console.error('Error loading recent activity:', error);
+                }
+            }
+
+            filterTokens(searchTerm) {
+                const filtered = mockTokens.filter(token => 
+                    token.tick.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                
+                this.tokens = filtered.length > 0 ? filtered : mockTokens;
+                this.loadTokenList();
+            }
+
+            startAutoRefresh() {
+                setInterval(() => {
+                    this.loadData();
+                }, CONFIG.REFRESH_INTERVAL);
+            }
+
+            setupEventListeners() {
+                // Add any additional event listeners here
+            }
+
+            showError(message) {
+                const container = document.querySelector('.container');
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.textContent = message;
+                container.insertBefore(errorDiv, container.firstChild);
+                
+                setTimeout(() => {
+                    errorDiv.remove();
+                }, 5000);
+            }
+        }
+
+        // Global functions for button actions
+        function tradeToken(ticker) {
+            alert(`Trading interface for ${ticker} would open here!`);
+            console.log(`Opening trade interface for ${ticker}`);
+        }
+
+        function viewToken(ticker) {
+            alert(`Detailed view for ${ticker} would open here!`);
+            console.log(`Opening detailed view for ${ticker}`);
+        }
+
+        // Global refresh function
+        async function loadData() {
+            const dapp = new BRC20TradingDApp();
+            await dapp.loadData();
+        }
+
+        // Initialize dApp when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new BRC20TradingDApp();
+        });
+    </script>
+</body>
+</html>

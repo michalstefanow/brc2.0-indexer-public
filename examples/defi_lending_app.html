@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeFi Lending App - Bitcoin Smart Contracts</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+        .header p { font-size: 1.1rem; opacity: 0.9; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #8e44ad; }
+        
+        .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .lending-pools { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .user-portfolio { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        
+        .pool-item { padding: 20px; border: 1px solid #eee; border-radius: 10px; margin-bottom: 15px; transition: all 0.3s; }
+        .pool-item:hover { border-color: #8e44ad; box-shadow: 0 5px 15px rgba(142, 68, 173, 0.2); }
+        .pool-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .pool-name { font-size: 1.3rem; font-weight: bold; color: #8e44ad; }
+        .pool-apy { background: #e8f5e8; color: #28a745; padding: 5px 12px; border-radius: 20px; font-weight: bold; }
+        .pool-details { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .pool-detail { text-align: center; }
+        .pool-detail-label { color: #666; font-size: 0.9rem; margin-bottom: 5px; }
+        .pool-detail-value { font-weight: bold; color: #333; }
+        .pool-actions { display: flex; gap: 10px; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; transition: all 0.3s; }
+        .btn-primary { background: #8e44ad; color: white; }
+        .btn-primary:hover { background: #7d3c98; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        
+        .portfolio-item { padding: 15px; border-bottom: 1px solid #eee; }
+        .portfolio-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .portfolio-type { font-weight: bold; color: #8e44ad; }
+        .portfolio-amount { font-size: 1.1rem; color: #333; }
+        .portfolio-details { color: #666; font-size: 0.9rem; }
+        
+        .refresh-btn { background: #8e44ad; color: white; border: none; padding: 12px 25px; border-radius: 25px; cursor: pointer; margin-bottom: 20px; }
+        
+        .loading { text-align: center; color: #666; font-style: italic; }
+        .error { background: #fee; color: #c33; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: white; margin: 15% auto; padding: 25px; border-radius: 15px; width: 80%; max-width: 500px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 1.5rem; font-weight: bold; color: #8e44ad; }
+        .close { font-size: 2rem; cursor: pointer; color: #666; }
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
+        .form-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; }
+        
+        @media (max-width: 768px) {
+            .main-content { grid-template-columns: 1fr; }
+            .pool-details { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏦 DeFi Lending App</h1>
+            <p>Smart Contract Lending on Bitcoin Network</p>
+        </div>
+        
+        <button class="refresh-btn" onclick="loadData()">🔄 Refresh DeFi Data</button>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalLiquidity">-</div>
+                <div>Total Liquidity</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalBorrowed">-</div>
+                <div>Total Borrowed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeLoans">-</div>
+                <div>Active Loans</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="avgAPY">-</div>
+                <div>Average APY</div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="lending-pools">
+                <h2>💰 Lending Pools</h2>
+                <div id="lendingPools">Loading pools...</div>
+            </div>
+            
+            <div class="user-portfolio">
+                <h2>👤 Your Portfolio</h2>
+                <div id="userPortfolio">Loading portfolio...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lend Modal -->
+    <div id="lendModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">💰 Lend Assets</div>
+                <span class="close" onclick="closeModal('lendModal')">&times;</span>
+            </div>
+            <form id="lendForm">
+                <div class="form-group">
+                    <label class="form-label">Pool</label>
+                    <input type="text" class="form-input" id="lendPool" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Amount</label>
+                    <input type="number" class="form-input" id="lendAmount" placeholder="Enter amount" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">APY</label>
+                    <input type="text" class="form-input" id="lendAPY" readonly>
+                </div>
+                <button type="submit" class="btn btn-success" style="width: 100%;">Lend Assets</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Borrow Modal -->
+    <div id="borrowModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">💳 Borrow Assets</div>
+                <span class="close" onclick="closeModal('borrowModal')">&times;</span>
+            </div>
+            <form id="borrowForm">
+                <div class="form-group">
+                    <label class="form-label">Pool</label>
+                    <input type="text" class="form-input" id="borrowPool" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Amount</label>
+                    <input type="number" class="form-input" id="borrowAmount" placeholder="Enter amount" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Collateral Required</label>
+                    <input type="text" class="form-input" id="borrowCollateral" readonly>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Borrow Assets</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            REFRESH_INTERVAL: 30000, // 30 seconds
+            RPC_URL: 'http://localhost:18545'
+        };
+
+        // Mock DeFi data
+        const mockPools = [
+            { name: 'ORDI Pool', asset: 'ORDI', apy: 8.5, totalLiquidity: 1250000, totalBorrowed: 450000, utilization: 36.0, collateralRatio: 150 },
+            { name: 'SATS Pool', asset: 'SATS', apy: 12.2, totalLiquidity: 890000, totalBorrowed: 320000, utilization: 36.0, collateralRatio: 140 },
+            { name: 'MEME Pool', asset: 'MEME', apy: 15.8, totalLiquidity: 456000, totalBorrowed: 180000, utilization: 39.5, collateralRatio: 160 },
+            { name: 'BTC Pool', asset: 'BTC', apy: 3.2, totalLiquidity: 5000000, totalBorrowed: 1200000, utilization: 24.0, collateralRatio: 200 }
+        ];
+
+        const mockPortfolio = [
+            { type: 'Lent', asset: 'ORDI', amount: 5000, apy: 8.5, earnings: 42.50 },
+            { type: 'Lent', asset: 'SATS', amount: 25000, apy: 12.2, earnings: 76.25 },
+            { type: 'Borrowed', asset: 'MEME', amount: 100, apy: 15.8, collateral: 160 },
+            { type: 'Lent', asset: 'BTC', amount: 0.5, apy: 3.2, earnings: 0.40 }
+        ];
+
+        // Main DeFi app class
+        class DeFiLendingApp {
+            constructor() {
+                this.pools = [...mockPools];
+                this.portfolio = [...mockPortfolio];
+                this.init();
+            }
+
+            async init() {
+                await this.loadData();
+                this.startAutoRefresh();
+                this.setupEventListeners();
+            }
+
+            async loadData() {
+                try {
+                    await Promise.all([
+                        this.loadStats(),
+                        this.loadLendingPools(),
+                        this.loadUserPortfolio()
+                    ]);
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                    this.showError('Failed to load DeFi data');
+                }
+            }
+
+            async loadStats() {
+                try {
+                    const totalLiquidity = this.pools.reduce((sum, pool) => sum + pool.totalLiquidity, 0);
+                    const totalBorrowed = this.pools.reduce((sum, pool) => sum + pool.totalBorrowed, 0);
+                    const activeLoans = this.portfolio.filter(item => item.type === 'Borrowed').length;
+                    const avgAPY = this.pools.reduce((sum, pool) => sum + pool.apy, 0) / this.pools.length;
+
+                    document.getElementById('totalLiquidity').textContent = '$' + totalLiquidity.toLocaleString();
+                    document.getElementById('totalBorrowed').textContent = '$' + totalBorrowed.toLocaleString();
+                    document.getElementById('activeLoans').textContent = activeLoans;
+                    document.getElementById('avgAPY').textContent = avgAPY.toFixed(1) + '%';
+
+                } catch (error) {
+                    console.error('Error loading stats:', error);
+                }
+            }
+
+            async loadLendingPools() {
+                try {
+                    const poolsDiv = document.getElementById('lendingPools');
+                    
+                    if (this.pools.length === 0) {
+                        poolsDiv.innerHTML = '<div class="loading">No lending pools found</div>';
+                        return;
+                    }
+
+                    const html = this.pools.map(pool => `
+                        <div class="pool-item">
+                            <div class="pool-header">
+                                <div class="pool-name">${pool.name}</div>
+                                <div class="pool-apy">${pool.apy}% APY</div>
+                            </div>
+                            <div class="pool-details">
+                                <div class="pool-detail">
+                                    <div class="pool-detail-label">Total Liquidity</div>
+                                    <div class="pool-detail-value">$${pool.totalLiquidity.toLocaleString()}</div>
+                                </div>
+                                <div class="pool-detail">
+                                    <div class="pool-detail-label">Total Borrowed</div>
+                                    <div class="pool-detail-value">$${pool.totalBorrowed.toLocaleString()}</div>
+                                </div>
+                                <div class="pool-detail">
+                                    <div class="pool-detail-label">Utilization</div>
+                                    <div class="pool-detail-value">${pool.utilization}%</div>
+                                </div>
+                                <div class="pool-detail">
+                                    <div class="pool-detail-label">Collateral Ratio</div>
+                                    <div class="pool-detail-value">${pool.collateralRatio}%</div>
+                                </div>
+                            </div>
+                            <div class="pool-actions">
+                                <button class="btn btn-success" onclick="openLendModal('${pool.name}', ${pool.apy})">Lend</button>
+                                <button class="btn btn-primary" onclick="openBorrowModal('${pool.name}', ${pool.collateralRatio})">Borrow</button>
+                                <button class="btn btn-secondary" onclick="viewPoolDetails('${pool.name}')">Details</button>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    poolsDiv.innerHTML = html;
+
+                } catch (error) {
+                    console.error('Error loading lending pools:', error);
+                    document.getElementById('lendingPools').innerHTML = '<div class="error">Failed to load pools</div>';
+                }
+            }
+
+            async loadUserPortfolio() {
+                try {
+                    const portfolioDiv = document.getElementById('userPortfolio');
+                    
+                    if (this.portfolio.length === 0) {
+                        portfolioDiv.innerHTML = '<div class="loading">No portfolio items found</div>';
+                        return;
+                    }
+
+                    const html = this.portfolio.map(item => `
+                        <div class="portfolio-item">
+                            <div class="portfolio-header">
+                                <div class="portfolio-type">${item.type}</div>
+                                <div class="portfolio-amount">${item.amount.toLocaleString()} ${item.asset}</div>
+                            </div>
+                            <div class="portfolio-details">
+                                ${item.type === 'Lent' ? 
+                                    `APY: ${item.apy}% | Earnings: $${item.earnings.toFixed(2)}` : 
+                                    `APY: ${item.apy}% | Collateral: $${item.collateral}`
+                                }
+                            </div>
+                        </div>
+                    `).join('');
+
+                    portfolioDiv.innerHTML = html;
+
+                } catch (error) {
+                    console.error('Error loading portfolio:', error);
+                    document.getElementById('userPortfolio').innerHTML = '<div class="error">Failed to load portfolio</div>';
+                }
+            }
+
+            startAutoRefresh() {
+                setInterval(() => {
+                    this.loadData();
+                }, CONFIG.REFRESH_INTERVAL);
+            }
+
+            setupEventListeners() {
+                // Setup form submissions
+                document.getElementById('lendForm').addEventListener('submit', this.handleLend.bind(this));
+                document.getElementById('borrowForm').addEventListener('submit', this.handleBorrow.bind(this));
+            }
+
+            async handleLend(event) {
+                event.preventDefault();
+                const pool = document.getElementById('lendPool').value;
+                const amount = parseFloat(document.getElementById('lendAmount').value);
+                
+                console.log(`Lending ${amount} to ${pool}`);
+                alert(`Lending transaction submitted for ${amount} to ${pool}!`);
+                
+                closeModal('lendModal');
+                // In production, you'd call your smart contract here
+            }
+
+            async handleBorrow(event) {
+                event.preventDefault();
+                const pool = document.getElementById('borrowPool').value;
+                const amount = parseFloat(document.getElementById('borrowAmount').value);
+                
+                console.log(`Borrowing ${amount} from ${pool}`);
+                alert(`Borrowing transaction submitted for ${amount} from ${pool}!`);
+                
+                closeModal('borrowModal');
+                // In production, you'd call your smart contract here
+            }
+
+            showError(message) {
+                const container = document.querySelector('.container');
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.textContent = message;
+                container.insertBefore(errorDiv, container.firstChild);
+                
+                setTimeout(() => {
+                    errorDiv.remove();
+                }, 5000);
+            }
+        }
+
+        // Global functions
+        function openLendModal(poolName, apy) {
+            document.getElementById('lendPool').value = poolName;
+            document.getElementById('lendAPY').value = apy + '%';
+            document.getElementById('lendModal').style.display = 'block';
+        }
+
+        function openBorrowModal(poolName, collateralRatio) {
+            document.getElementById('borrowPool').value = poolName;
+            document.getElementById('borrowCollateral').value = collateralRatio + '% of borrowed amount';
+            document.getElementById('borrowModal').style.display = 'block';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function viewPoolDetails(poolName) {
+            alert(`Detailed view for ${poolName} would open here!`);
+        }
+
+        async function loadData() {
+            const app = new DeFiLendingApp();
+            await app.loadData();
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+
+        // Initialize app when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new DeFiLendingApp();
+        });
+    </script>
+</body>
+</html>
