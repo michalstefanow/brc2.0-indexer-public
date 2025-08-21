@@ -159,4 +159,7 @@ tail -f brc20-programmable-module/server.log
 
 ---
 
-**🎉 Your BRC20 Programmable Module is ready for production DeFi development!**
+## 👨‍💻 Author
+
+- **Twitter**: [@michalstefanow](https://twitter.com/michalstefanow)
+- **Telegram**: [@michalstefanow](https://t.me/mylord1_1)
