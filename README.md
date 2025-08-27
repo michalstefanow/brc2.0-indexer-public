@@ -161,5 +161,4 @@ tail -f brc20-programmable-module/server.log
 
 ## 👨‍💻 Author
 
-- **Twitter**: [@michalstefanow](https://twitter.com/michalstefanow)
-- **Telegram**: [@michalstefanow](https://t.me/mylord1_1)
+- **Telegram**: [@mooneagle1_1](https://t.me/mooneagle1_1)
